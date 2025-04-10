@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maritime Taboo Game</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom right, #e0f7fa, #80deea);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      max-width: 450px;
+      text-align: center;
+    }
+    .term {
+      font-size: 2rem;
+      color: #00796b;
+      margin-bottom: 1rem;
+    }
+    .forbidden {
+      list-style: none;
+      padding: 0;
+      margin-bottom: 1rem;
+    }
+    .forbidden li {
+      font-size: 1.2rem;
+      color: #d32f2f;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 1rem;
+    }
+    button {
+      background-color: #00796b;
+      color: white;
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover {
+      background-color: #004d40;
+    }
+    .info {
+      margin-top: 1rem;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="term" id="term">Loading...</div>
+    <ul class="forbidden" id="forbidden"></ul>
+    <div class="controls">
+      <button onclick="skipCard()">Pass</button>
+      <button onclick="nextCard(true)">Correct</button>
+    </div>
+    <div class="info">
+      <div>Time left: <span id="timer">60</span>s</div>
+      <div>Score: <span id="score">0</span></div>
+    </div>
+  </div>
+
+  <audio id="ding" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
+
+  <script>
+    const cards = [
+      { term: "Port", forbidden: ["berth", "stop", "load/unload"] },
+      { term: "Bridge Room", forbidden: ["captain", "rudder", "observe"] },
+      { term: "Manoeuvre", forbidden: ["move", "change", "course"] },
+      { term: "Machinery", forbidden: ["machine", "engine", "equipment"] },
+      { term: "Crane", forbidden: ["lift", "heavy", "machine"] },
+      { term: "Ship Engineer", forbidden: ["work", "sea", "fix"] },
+      { term: "Stability", forbidden: ["sink", "balanced", "fixed"] },
+      { term: "Rudder", forbidden: ["control", "steer", "direction"] },
+      { term: "Master", forbidden: ["captain", "leader", "crew"] },
+      { term: "Tug", forbidden: ["pull/push", "docking", "rope"] },
+      { term: "Funnel", forbidden: ["smoke", "ship", "pipe"] },
+      { term: "Mooring", forbidden: ["anchor", "boat", "tie"] },
+      { term: "Anchor", forbidden: ["vessel", "rope", "move"] },
+      { term: "Starboard", forbidden: ["right", "side", "ship"] },
+      { term: "Volume", forbidden: ["space", "size", "amount"] },
+      { term: "Cabin", forbidden: ["room", "bed", "rest"] },
+      { term: "Hold", forbidden: ["crane", "cargo", "storage"] },
+      { term: "Galley", forbidden: ["kitchen", "eat", "sit"] },
+      { term: "Depth", forbidden: ["deep", "water", "bottom"] },
+      { term: "Deck", forbidden: ["floor", "outside", "walk"] },
+      { term: "Hatch Cover", forbidden: ["ship", "open", "cargo"] },
+      { term: "Tank", forbidden: ["hold", "container"] },
+      { term: "Gangway", forbidden: ["walk", "bridge", "vessel"] },
+      { term: "Ship", forbidden: ["boat", "sea", "transport"] },
+      { term: "Sail", forbidden: ["wind", "travel", "vessel"] },
+      { term: "Captain", forbidden: ["leader", "sailor"] },
+      { term: "Compass", forbidden: ["tool", "direction", "south"] },
+      { term: "Submarine", forbidden: ["water", "deep"] },
+      { term: "Wave", forbidden: ["movement", "ocean"] },
+      { term: "Route", forbidden: ["path", "map", "destination"] },
+      { term: "Crew", forbidden: ["team", "officers"] },
+      { term: "Navigation", forbidden: ["steer", "course"] },
+      { term: "Cargo", forbidden: ["goods", "carry"] },
+      { term: "Lighthouse", forbidden: ["light", "tower", "coast"] },
+      { term: "Seafarer", forbidden: ["travel"] },
+      { term: "Harbor", forbidden: ["city"] },
+      { term: "Marine", forbidden: ["ocean"] },
+      { term: "Watchkeeping", forbidden: ["on duty", "hours"] },
+      { term: "On-board", forbidden: ["used"] },
+      { term: "Cadet", forbidden: ["training", "student"] },
+      { term: "Regulations", forbidden: ["rules", "follow", "order"] },
+      { term: "Upkeep", forbidden: ["repair", "maintenance", "operate"] },
+      { term: "Chart", forbidden: ["sea", "navigation"] },
+      { term: "Drill", forbidden: ["hole", "activity"] },
+      { term: "Hook", forbidden: ["secure", "dock"] },
+      { term: "Reefer", forbidden: ["refrigerator", "fresh food"] },
+      { term: "Cargo Handling", forbidden: ["load", "transport"] },
+      { term: "Icebreaker", forbidden: ["clear", "icy"] },
+      { term: "Lightship", forbidden: ["dangerous", "shore"] },
+      { term: "Cruise", forbidden: ["luxury", "passengers", "huge"] },
+      { term: "Stern", forbidden: ["back", "part"] },
+      { term: "Bow", forbidden: ["front"] },
+      { term: "Logbook", forbidden: ["important", "record"] },
+      { term: "Passage", forbidden: ["journey"] },
+      { term: "Periscope", forbidden: ["look", "above"] },
+      { term: "Nautical", forbidden: ["marine", "sailors"] },
+      { term: "Maritime Learners", forbidden: ["naval"] },
+    ];
+
+    let current = 0;
+    let score = 0;
+    let time = 60;
+    const ding = document.getElementById("ding");
+
+    function updateCard() {
+      const card = cards[current];
+      document.getElementById('term').innerText = card.term;
+      const list = document.getElementById('forbidden');
+      list.innerHTML = '';
+      card.forbidden.forEach(word => {
+        const li = document.createElement('li');
+        li.innerText = word;
+        list.appendChild(li);
+      });
+    }
+
+    function nextCard(correct = false) {
+      if (correct) {
+        score++;
+        document.getElementById('score').innerText = score;
+        ding.play();
+      }
+      current = (current + 1) % cards.length;
+      updateCard();
+    }
+
+    function skipCard() {
+      current = (current + 1) % cards.length;
+      updateCard();
+    }
+
+    function countdown() {
+      if (time > 0) {
+        time--;
+        document.getElementById('timer').innerText = time;
+      } else {
+        alert("Time's up! Your score: " + score);
+        clearInterval(timerInterval);
+      }
+    }
+
+    updateCard();
+    const timerInterval = setInterval(countdown, 1000);
+  </script>
+</body>
+</html>
